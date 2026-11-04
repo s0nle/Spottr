@@ -1,0 +1,30 @@
+# secrets (Meta Model API key, camera login)
+.env
+
+# footage and run output (large, private: people at the pool)
+raw_footage/
+results/
+diag/frames/
+*.mkv
+*.mp4
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# dashboard (Vite)
+frontend/node_modules/
+frontend/dist/
+# saved pool outline picture
+pool_zone.jpg
+
+# pictures of real people at the pool (privacy: kept off GitHub)
+pool.jpg
+branding/real/
+branding/mockup/*.png
+branding/mockup/pool.jpg
+diag/frames_small/
+
+# empty placeholder
+spottr readme

@@ -1,0 +1,89 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Spottr is dark-only: black background, dark-gray glass panels, Muse blue.
+   Yellow / red are reserved for alarm levels. White = selection. */
+:root {
+  --radius: 0.75rem;
+  --background: #000000;
+  --foreground: #f5f5f5;
+  --card: rgba(255, 255, 255, 0.045);
+  --card-foreground: #f5f5f5;
+  --popover: #0a0a0a;
+  --popover-foreground: #f5f5f5;
+  --primary: #0866ff;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.1);
+  --secondary-foreground: #f5f5f5;
+  --muted: #262626;
+  --muted-foreground: #a3a3a3;
+  --accent: rgba(255, 255, 255, 0.1);
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #0866ff;
+}
+
+@theme inline {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-muse: #0866ff;
+  --color-muse-soft: #5aa0ff;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --animate-flash: flash 0.5s steps(1) infinite; /* 2 Hz */
+  @keyframes flash {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0.25; }
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html, body, #root { height: 100%; }
+  body { @apply bg-background text-foreground font-sans antialiased; overflow: hidden; }
+}
+
+@utility glass {
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+@utility glow-red {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.35), 0 0 36px rgba(220, 38, 38, 0.45);
+}
+@utility glow-white {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55), 0 0 26px rgba(255, 255, 255, 0.25);
+}
+@utility glow-blue {
+  box-shadow: 0 0 28px rgba(8, 102, 255, 0.55);
+}
+@utility tv-static {
+  background-color: #3f3f46;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.55'/></svg>");
+}
+@utility hazard {
+  background: repeating-linear-gradient(-45deg, #000 0 14px, #b91c1c 14px 28px);
+}

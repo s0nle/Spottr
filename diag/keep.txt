@@ -1,0 +1,10 @@
+# Never deleted by the 3-day retention (spottr_retention.py): test data.
+# Regression-test logs (diag/regress.py)
+results/live_log_20261102_232854.json
+results/live_log_20261102_232056.json
+results/live_log_20261103_014709.json
+# Empty-pool run (stripe / fixture analysis)
+results/live_log_20261103_033502.json
+# The full pool recordings the test clips came from
+raw_footage/pool_20261102_091918.mkv
+raw_footage/pool_20261102_092917.mkv
