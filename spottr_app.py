@@ -51,9 +51,11 @@ PORT = int(os.environ.get("SPOTTR_PORT", "8765"))
 GPU_URL = os.environ.get(
     "SPOTTR_URL", "https://sle573--spottr-live-west-livedetector-web-dev.us-west.modal.run")
 STREAMS = int(os.environ.get("SPOTTR_STREAMS", "7"))
-MIN_LIVE = 3                 # start monitoring once this many GPUs are live
+GPU_RETRY_S = 5              # a GPU that fails to start is tried again after this
 PROMPTS = "person,head"
-MAX_W, QUALITY = 2016, 90
+# frame size sent to the GPUs; lower these on a slow upload (e.g. 1600 / 80)
+MAX_W = int(os.environ.get("SPOTTR_MAX_W", "2016"))
+QUALITY = int(os.environ.get("SPOTTR_QUALITY", "90"))
 POOL_T, DECK_T, SUSTAIN_POOL, SUSTAIN_DECK = 0.30, 0.50, 0.20, 0.35
 FROZEN_S = 4.0               # camera picture unchanged this long = frozen feed
 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
@@ -98,6 +100,7 @@ class Session:
         self.app = app
         self.source, self.is_file = resolve_source(source)
         self.stop_flag = False
+        self.go = asyncio.Event()             # set when the lifeguard presses Start monitoring
         self.phase = "connecting"
         self.camera = "connecting"
         self.gpus = [{"i": i + 1, "state": "starting", "msg": ""} for i in range(STREAMS)]
@@ -205,10 +208,16 @@ class Session:
                                           ping_interval=20, ping_timeout=120)
         except Exception as e:  # noqa: BLE001
             text = str(e)
-            g.update(state="error", msg="token rejected" if "4401" in text else
+            rejected = "4401" in text
+            g.update(state="error", msg="token rejected" if rejected else
                      "GPU server not reachable" if "getaddrinfo" in text or "refused" in text
                      else text[:80])
             await self.push_status()
+            # keep trying (Modal may still be queueing GPUs), unless the token is wrong
+            if not rejected and not self.stop_flag:
+                await asyncio.sleep(GPU_RETRY_S)
+                if not self.stop_flag:
+                    asyncio.create_task(self.connect_gpu(i))
             return
         if self.stop_flag:
             await ws.close()
@@ -307,20 +316,19 @@ class Session:
         await self.push_status()
         for i in range(STREAMS):
             asyncio.create_task(self.connect_gpu(i))
-        # wait until enough GPUs are live (or every one of them failed)
-        while not self.stop_flag:
-            live = sum(g["state"] == "live" for g in self.gpus)
-            failed = sum(g["state"] == "error" for g in self.gpus)
-            if live >= min(MIN_LIVE, STREAMS) or (live and live + failed == STREAMS):
-                break
-            if failed == STREAMS:
+        # GPUs warm up (failed ones keep retrying); monitoring only starts when
+        # the lifeguard presses Start monitoring
+        while not self.stop_flag and not self.go.is_set():
+            if all(g["msg"] == "token rejected" for g in self.gpus):
                 self.phase = "error"
-                msg = next((g["msg"] for g in self.gpus if g["msg"]), "")
-                await self.push_status("GPU server not reachable — is `modal serve spottr_live.py` "
-                                       f"running? ({msg})")
+                await self.push_status("The GPU server rejected the access token: SPOTTR_TOKEN in .env "
+                                       "must match the one `modal serve spottr_live.py` started with.")
                 cap.release()
                 return
-            await asyncio.sleep(0.3)
+            try:
+                await asyncio.wait_for(self.go.wait(), 0.3)
+            except asyncio.TimeoutError:
+                pass
         if self.stop_flag:
             cap.release()
             return
@@ -471,7 +479,7 @@ class Session:
                 "gpus_live": len(self.conns), "gpus_total": STREAMS, "errors": self.errors}
         state = {"type": "state", "t": round(t, 2), "session_s": round(t, 1), "perf": perf,
                  "counts": counts, "swimmers": swimmers, "deck": deck, "unverified": unverified,
-                 "top": NAMES[self.alarms.top()], "sounding": self.alarms.sounding(),
+                 "top": NAMES[self.alarms.top_active()], "sounding": self.alarms.sounding(),
                  "events": self.events[-40:][::-1]}
         self.log.append({"t": round(t, 3), "delay_ms": round(self.delays[-1], 1),
                          "gpu_ms": res.get("gpu_ms", 0.0), "counts": counts,
@@ -584,10 +592,23 @@ class App:
                 return
             self.session = Session(self, src)
             asyncio.create_task(self._run(self.session))
+        elif cmd == "begin" and s:
+            if not s.conns:
+                self._reply(ws, {"type": "error", "message": "Wait for at least one GPU to be live."})
+                return
+            s.go.set()
         elif cmd == "stop" and s:
             await self.finish(s, "Monitoring stopped.")
         elif cmd == "ack" and s:
-            s.alarms.ack(int(m["id"]))
+            tid = int(m["id"])
+            tr = s.tracker.tracks.get(tid)
+            if tr is not None and tr["state"] == "LOST":
+                # the lifeguard checked the spot and nobody is there: remove it
+                del s.tracker.tracks[tid]
+                s.alarms.dismiss(tid)
+                s.event(s._t(), "DROPPED", tid, "LOST ID dismissed by the lifeguard")
+            else:
+                s.alarms.ack(tid)
         elif cmd == "ack_all" and s:
             for tid in list(s.alarms.state):
                 s.alarms.ack(tid)

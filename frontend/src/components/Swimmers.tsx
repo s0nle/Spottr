@@ -159,7 +159,7 @@ function LostCard({ w, sel, onClick, onAck }: { w: Swimmer; sel: boolean; onClic
         <div className="text-[12px] text-neutral-500">{Math.round(w.seen_ago)} s ago{w.lost_at_edge ? " · may have swum out of view" : " · not clearly seen since"}</div>
         {w.acked
           ? <span className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-white/10 border border-white/15 text-neutral-300 text-[12px] font-semibold px-2 py-0.5"><VolumeX className="size-[13px]" />Acknowledged · sound off</span>
-          : <button onClick={(e) => { e.stopPropagation(); onAck(w.id) }} className="mt-2 rounded-lg bg-white text-red-700 text-[12px] font-bold px-3 py-1">Acknowledge</button>}
+          : <button onClick={(e) => { e.stopPropagation(); onAck(w.id) }} className="mt-2 rounded-lg bg-white text-red-700 text-[12px] font-bold px-3 py-1">Checked · dismiss</button>}
       </div>
     </div>
   )

@@ -39,6 +39,7 @@ interface Props extends SetupProps {
   setShowUnv: (v: boolean) => void
   onCancel: () => void
   onBack: () => void
+  onBegin: () => void
 }
 
 export function Feed(p: Props) {
@@ -55,7 +56,7 @@ export function Feed(p: Props) {
       {view === "live" && p.status?.frozen && <Frozen status={p.status} />}
       {view === "setup" && <Setup {...p} />}
       {view === "calibrate" && <Calibrate {...p} />}
-      {view === "connecting" && <Connecting status={p.status!} hello={p.hello} onCancel={p.onCancel} />}
+      {view === "connecting" && <Connecting status={p.status!} hello={p.hello} onCancel={p.onCancel} onBegin={p.onBegin} />}
       {view === "error" && <ErrorCard message={p.status?.message ?? ""} onBack={p.onBack} />}
       {view === "offline" && <Offline />}
     </div>
@@ -197,7 +198,7 @@ function Setup({ source, setSource, onStart, onRecalibrate, hello, status }: Pro
         </div>
         <button onClick={onStart} disabled={!source}
           className="mt-4 w-full rounded-xl bg-muse text-white font-bold text-[16px] py-3 flex items-center justify-center gap-2 glow-blue disabled:opacity-40 hover:brightness-110">
-          <Play className="size-[18px] fill-current" />Start monitoring
+          <Play className="size-[18px] fill-current" />Start GPUs
         </button>
         <div className="text-[12px] text-neutral-500 mt-2.5 text-center">Starts the GPUs (first start ~1–2 min) and turns on the alarm sound.</div>
       </div>
@@ -243,7 +244,7 @@ function Calibrate({ calib, onSaveZone, onCancelCalib }: Props) {
   )
 }
 
-function Connecting({ status, hello, onCancel }: { status: Status; hello: Hello | null; onCancel: () => void }) {
+function Connecting({ status, hello, onCancel, onBegin }: { status: Status; hello: Hello | null; onCancel: () => void; onBegin: () => void }) {
   const live = status.gpus.filter((g) => g.state === "live").length
   const total = status.gpus_total || 1
   const row = (label: string, state: string, cls: string, dot: string) => (
@@ -256,7 +257,7 @@ function Connecting({ status, hello, onCancel }: { status: Status; hello: Hello 
         <div className="flex items-center gap-4">
           <Mascot className="h-[78px] w-auto" />
           <div>
-            <div className="text-[20px] font-bold">Spottr is getting ready…</div>
+            <div className="text-[20px] font-bold">{live === total ? "All GPUs are ready" : "Spottr is getting ready…"}</div>
             <div className="text-[13px] text-neutral-400 mt-1">{status.message || "GPUs start in parallel. The first start takes 1–2 minutes."}</div>
           </div>
         </div>
@@ -266,15 +267,21 @@ function Connecting({ status, hello, onCancel }: { status: Status; hello: Hello 
           {hello?.zone ? row("Pool outline", "loaded", ok, "bg-muse") : row("Pool outline", "none — whole frame", "text-amber-300", "bg-amber-400")}
           {status.gpus.map((g) => (
             <div key={g.i}>{g.state === "live" ? row(`GPU ${g.i}`, "live", ok, "bg-muse")
-              : g.state === "error" ? row(`GPU ${g.i}`, g.msg || "failed", "text-red-300 truncate max-w-[150px]", "bg-red-500")
+              : g.state === "error" ? row(`GPU ${g.i}`, g.msg === "token rejected" ? g.msg : "retrying…", "text-red-300 truncate max-w-[150px]", "bg-red-500")
               : row(`GPU ${g.i}`, "starting · loading SAM 3.1…", "text-amber-300", "bg-amber-400 animate-flash")}</div>
           ))}
           {status.muse ? row("Muse Spark", "key found", ok, "bg-muse") : row("Muse Spark", "off (no key)", "text-neutral-400", "bg-neutral-600")}
         </div>
         <div className="mt-5 flex items-center gap-3 text-[13px]">
-          <span className="text-neutral-400">Monitoring starts as soon as 3 GPUs are live.</span>
+          <span className="text-neutral-400">
+            {live === total ? "Press Start monitoring when you're ready." : `${live} of ${total} GPUs live — the rest keep loading. You can start now or wait.`}
+          </span>
           <button onClick={onCancel} className="ml-auto rounded-md border border-neutral-600 px-3 py-1.5 hover:border-white">Cancel</button>
         </div>
+        <button onClick={onBegin} disabled={live === 0}
+          className={`mt-3 w-full rounded-xl bg-muse text-white font-bold text-[16px] py-3 flex items-center justify-center gap-2 disabled:opacity-40 hover:brightness-110 ${live === total ? "glow-blue" : ""}`}>
+          <Play className="size-[18px] fill-current" />Start monitoring · {live}/{total} GPUs
+        </button>
       </div>
     </div>
   )

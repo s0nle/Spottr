@@ -36,7 +36,7 @@ export default function App() {
   const live = s.live
   const worst: Swimmer | null = useMemo(() => {
     if (!live) return null
-    return [...live.swimmers].sort((a, b) => RANK[b.alarm] - RANK[a.alarm] || b.alarm_since - a.alarm_since)[0] ?? null
+    return [...live.swimmers].sort((a, b) => Number(a.acked) - Number(b.acked) || RANK[b.alarm] - RANK[a.alarm] || b.alarm_since - a.alarm_since)[0] ?? null
   }, [live])
   const top = live?.top ?? "OK"
 
@@ -86,7 +86,8 @@ export default function App() {
             onRecalibrate={() => { s.setCalib(null); setCalibrating(true); s.send({ cmd: "grab_frame", source }) }}
             onSaveZone={(points) => { s.send({ cmd: "save_zone", points, jpeg: s.calib }); setCalibrating(false) }}
             onCancelCalib={() => setCalibrating(false)}
-            onCancel={() => s.send({ cmd: "stop" })} onBack={() => s.send({ cmd: "stop" })} />
+            onCancel={() => s.send({ cmd: "stop" })} onBack={() => s.send({ cmd: "stop" })}
+            onBegin={() => { unlockSound(); s.send({ cmd: "begin" }) }} />
           {live && (
             <div className="-mt-2 flex justify-end">
               <button onClick={() => s.send({ cmd: "stop" })} className="text-[12px] text-neutral-500 hover:text-neutral-200">Stop monitoring</button>

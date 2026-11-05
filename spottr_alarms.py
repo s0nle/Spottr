@@ -149,6 +149,14 @@ class AlarmEngine:
     def top(self):
         return max((s["level"] for s in self.state.values()), default=OK)
 
+    def top_active(self):
+        """Highest level the lifeguard has NOT acknowledged yet (drives the
+        screen flash and banners; acknowledged alarms stay on their card)."""
+        return max((s["level"] for s in self.state.values() if not s["acked"]), default=OK)
+
+    def dismiss(self, tid):
+        self.state.pop(tid, None)
+
     def sounding(self):
         """True while any un-acknowledged ALARM / EMERGENCY is active."""
         return any(s["level"] >= ALARM and not s["acked"] for s in self.state.values())
